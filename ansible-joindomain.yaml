@@ -1,0 +1,63 @@
+---
+- hosts: [ssh]
+  connection: ssh
+  remote_user: root
+  gather_facts: no
+  tags:
+    - all
+  tasks:
+    - name: change hostname
+      #become: true
+      #become_user: root
+      hostname:
+        name: "{{inventory_hostname}}"
+    - name: install epel
+      yum:
+        name: epel-release
+    - name: install python
+      #become: true
+      #become_user: root
+      yum:
+        name: "{{packages}}"
+      vars:
+        packages:
+          - sssd
+          - realmd
+          - oddjob
+          - oddjob-mkhomedir
+          - adcli
+          - samba-common
+          - samba-common-tools
+          - krb5-workstation
+          - openldap-clients
+          - policycoreutils-python
+          - libselinux-python
+          - python-setuptools
+          - python-pip
+          - epel-release
+    - name: pip modules
+      pip:
+        name: "{{modules}}"
+      vars:
+        modules:
+          - pyexpect
+          - pexpect
+    - name: disable selinux
+      selinux:
+        state: disabled
+    - name: correct setup
+      lineinfile:
+        path:  /etc/sssd/sssd.conf
+        regexp: 'use_fully_qualified_names = True'
+        line: 'use_fully_qualified_names = False'
+    - name: setup home dir
+      lineinfile:
+        path: /etc/sssd/sssd.conf
+        regexp: "fallback_homedir = /home/%u@%d"
+        line: 'fallback_homedir = /home/%u'
+
+    - name: join domain
+      expect:
+        command: /bin/bash -c "realm join CORP.xxx.COM --user=xxxx"
+        responses:
+          Password for saar.grin: "xxxx"
